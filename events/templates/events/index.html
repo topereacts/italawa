@@ -1,16 +1,69 @@
 {% extends "events/layout.html" %}
 
 {% block body %}
-<nav>
-    <div class="logo">ITALAWA</div>
-    <ul>
-      <li><a href="#home">Home</a></li>
-      <li><a href="#events">Events</a></li>
-      <li><a href="#about">About</a></li>
-      <li><a href="#help">Help</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li> <a href="{% url 'login' %}"> <button>Create/Manage Event</button></a></li>
-    </ul>
-</nav>
+<div class="p-3">
+  <h2>Trending Events</h2>
+  <div id="eventCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      {% for event in events %}
+      <div class="carousel-item {% if forloop.first %}active{% endif %}">
+        <a href="{% url 'event:event_detail' event.id %}" class="card">
+          <img src="{{ event.poster.url }}" class="card-img-top custom-img-size" alt="{{ event.name }}">
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    <a class="carousel-control-prev" href="#eventCarousel" role="button" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </a>
+    <a class="carousel-control-next" href="#eventCarousel" role="button" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </a>
+  </div>
+
+  <h2>PROMO EVENTS</h2>
+  <div id="eventCarousel2" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      {% for event in events %}
+      {% if forloop.counter0|divisibleby:4 %}
+      <div class="carousel-item {% if forloop.first %}active{% endif %}">
+        <div class="row">
+      {% endif %}
+          <div class="col-md-3">
+            <a href="{% url 'event:event_detail' event.id %}" class="card custom-card-size2">
+              <img src="{{ event.poster.url }}" class="card-img-top custom-img-size2" alt="{{ event.name }}">
+              <div class="card-body">
+                <h5 class="card-title">{{ event.name }}</h5>
+                <p class="card-text">{{ event.description }}</p>
+                <p class="card-text">{{ event.start_time }}</p>
+                <p class="card-text">{{ event.category }}</p>
+                {% if event.min_price == 0 %}
+                <p class="card-text">Free</p>
+                {% else %}
+                <p class="card-text">Starting from ₦{{ event.min_price }}</p>
+                {% endif %}              
+              </div>
+            </a>
+          </div>
+      {% if forloop.counter0|add:1|divisibleby:4 or forloop.last %}
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <a class="carousel-control-prev" href="#eventCarousel2" role="button" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </a>
+    <a class="carousel-control-next" href="#eventCarousel2" role="button" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </a>
+  </div>
+
+  
+</div>
 
 {% endblock %}

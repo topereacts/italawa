@@ -1,0 +1,94 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+{% include "host/sidenav.html" %}
+<div class="main-content">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ticketModal">
+        Create Ticket
+    </button>    
+    <h2>{{ event.name }}</h2>
+
+    <!-- create ticket modal -->
+    <div class="modal fade" id="ticketModal" tabindex="-1" aria-labelledby="ticketModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketModalLabel">Create Ticket For {{ event.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ticketForm" method="post" data-event-id="{{ event.id }}">
+                        <div class="mb-3">
+                        <label for="type" class="form-label">Type</label>
+                        <input type="text" class="form-control" id="type" name="type" placeholder="VVIP">
+                        </div>
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Price</label>
+                            ₦<input type="number" class="form-control" id="price" name="price">
+                            <input type="hidden" id="hiddenPrice" name="price">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="freeCheckbox">
+                                <label class="form-check-label" for="freeCheckbox">
+                                    Free
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity">
+                        </div>
+                        <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" placeholder="Admits one"></textarea>
+                        </div>
+                        <div class="mb-3">
+                        <label for="deadline" class="form-label">Deadline</label>
+                        <input type="date" class="form-control" id="deadline" name="deadline">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="createBtn">Create</button>
+                    </form>
+                    <div id="ticketCard" style="display:none;">
+                        <!-- Ticket card content will be displayed here -->
+                        <button class="btn btn-secondary" id="addAnotherBtn">Add Another</button>
+                        <button class="btn btn-success" id="doneBtn">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ticket table -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Description</th>
+                <th>Deadline</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td>{{ ticket.type }}</td>
+                <td>{% if ticket.price == 0 %}Free{% else %}{{ ticket.price }}{% endif %}</td>
+                <td>{{ ticket.quantity }}</td>
+                <td>{{ ticket.description }}</td>
+                <td>{{ ticket.deadline }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}

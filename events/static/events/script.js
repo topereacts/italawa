@@ -1,131 +1,3 @@
-// to get event modal prefilled for editing or empty for creating
-function event_details(eventId = null) {
-    const modal = new bootstrap.Modal(document.getElementById('eventModal'));
-    const form = document.getElementById('eventForm');
-  
-    if (eventId) {
-      // Fetch event data from the server
-      fetch(`/get_event/${eventId}/`)
-        .then(response => response.json())
-        .then(data => {
-          // Populate form fields with data
-          form.elements['poster'].value = ""; // File input can't be prefilled
-          form.elements['name'].value = data.name;
-          form.elements['category'].value = data.category;
-          form.elements['start_time'].value = data.start_time;
-          form.elements['end_time'].value = data.end_time;
-          form.elements['description'].value = data.description;
-          form.elements['undisclosed'].checked = data.undisclosed;
-          form.elements['location'].value = data.location;
-          form.elements['directions'].value = data.directions;
-          form.elements['socials'].value = data.socials;
-        });
-    } else {
-      // Clear form for a new event
-      form.reset();
-    }
-  
-    modal.show();
-}
-
-
-function getCookie(name) {
-    const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith(name))
-        ?.split('=')[1];
-    return decodeURIComponent(cookieValue);
-}
-
-
-
-
-// ensure form is filled before user can save
-document.addEventListener("DOMContentLoaded", function() {
-    const form = document.getElementById("eventForm");
-    const saveButton = document.getElementById("saveButton");
-
-    form.addEventListener("input", function() {
-        let allFilled = true;
-        form.querySelectorAll("input, textarea, select").forEach(function(input) {
-            if (!input.value) {
-                allFilled = false;
-            }
-        });
-        saveButton.disabled = !allFilled;
-    });
-});
-
-
-// to preview image in event details form
-document.addEventListener('DOMContentLoaded', () => {
-    const input = document.getElementById('eventPoster');
-    const preview = document.getElementById('preview');
-
-    input.addEventListener('change', () => {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-
-            reader.onload = function (e) {
-                preview.src = e.target.result; // Set image source
-                preview.style.display = 'block'; // Display the image
-            };
-
-            reader.readAsDataURL(input.files[0]); // Read file as DataURL
-        } else {
-            console.error("No file selected or unsupported file type.");
-        }
-    });
-});
-
-
-// for submitting the event details
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('eventForm');
-    form.addEventListener('submit', async function(event) {
-        event.preventDefault(); // Prevent the default form submission
-
-        const formData = new FormData(form);
-        const response = await fetch(form.action, {
-            method: 'POST',
-            body: formData,
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            // Update the modal with event details
-            document.querySelector('.modal-content').innerHTML = `
-                <div class="event-details">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <h2 class="modal-title">${result.name}</h2>
-                    <p><strong>Category:</strong> ${result.category}</p>
-                    <img src="${result.poster}" alt="Event Poster" class="img-fluid">
-                    <p><strong>Description:</strong> ${result.description}</p>
-                    <p><strong>Location:</strong> ${result.location}</p>
-                    <p><strong>Start Time:</strong> ${result.start_time}</p>
-                    <p><strong>End Time:</strong> ${result.end_time}</p>
-                    <button class="btn btn-primary">Manage Event</button>
-                </div>
-            `;
-        } else {
-            // Handle errors
-            console.log(result.errors);
-        }
-    });
-});
-
-
-
-
-document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/events')
-        .then(response => response.json())
-        .then(events => {
-            displayEvents(events);
-        });
-});
-
-
 function displayEvents(events) {
     const container = document.querySelector('#events-container');
     container.innerHTML = ''; // Clear the container first
@@ -145,4 +17,276 @@ function displayEvents(events) {
         `;
         container.innerHTML += eventCard;
     });
+}
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('openModal').onclick = function() {
+      const eventId = document.getElementById('eventDetail').getAttribute('data-event-id');
+      fetch(`/event_detail/${eventId}/get_tickets/`)
+        .then(response => response.json())
+        .then(data => {
+          const ticketContainer = document.getElementById('ticketContainer');
+          ticketContainer.innerHTML = ''; // Clear previous content
+          data.tickets.forEach(ticket => {
+            const ticketCard = document.createElement('div');
+            ticketCard.className = 'card mb-3';
+            console.log(ticket.id)
+            ticketCard.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">${ticket.type}</h5>
+                    <p class="card-text">${ticket.description}</p>
+                    <p class="card-text">Price: ₦${ticket.price}</p>
+                    <p class="card-text">Available: ${ticket.quantity}</p>
+                    <input type="hidden" class="ticket_id" value="${ticket.id}">
+                    <select class="quantity-select" data-id="${ticket.id}" data-price="${ticket.price}">
+                        ${Array.from({ length: ticket.quantity + 1 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+            ticketContainer.appendChild(ticketCard);
+          });
+          $('#ticketModal').modal('show');
+        });
+    };
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('ticketContainer').addEventListener('change', function(event) {
+        console.log("Event listener triggered");
+        if (event.target.classList.contains('quantity-select')) {
+        let subtotal = 0;
+        document.querySelectorAll('.quantity-select').forEach(select => {
+            const quantity = parseInt(select.value);
+            const price = parseFloat(select.getAttribute('data-price'));
+            subtotal += quantity * price;
+        });
+        const tax = subtotal * 0.1; // Assuming 10% tax
+        const total = subtotal + tax;
+        document.getElementById('subtotal').innerText = subtotal.toFixed(2);
+        document.getElementById('tax').innerText = tax.toFixed(2);
+        document.getElementById('total').innerText = total.toFixed(2);
+        }
+    });
+});
+
+
+
+
+// document.addEventListener('DOMContentLoaded', function() {
+//     const paymentForm = document.getElementById('paymentForm');
+//     paymentForm.addEventListener("submit", payWithPaystack, false);
+
+//     function payWithPaystack(e) {
+//         e.preventDefault();
+
+//         const eventId = document.getElementById('eventDetail')?.getAttribute('data-event-id');
+//         if (!eventId) {
+//             console.error('Event ID is missing.');
+//             return;
+//         }
+
+//         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+//         if (!csrftoken) {
+//             console.error('CSRF token is missing.');
+//             return;
+//         }
+
+//         const handler = PaystackPop.setup({
+//             key: 'pk_test_553d9f0f523ae22fcbb9131cc4b4f2fcce2d3c69',
+//             email: document.getElementById("email").value,
+//             amount: document.getElementById("total").innerText * 100,
+//             currency: 'NGN',
+//             ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+//             onClose: function() {
+//                 alert('Window closed.');
+//             },
+//             callback: function(response) {
+//                 console.log('Payment complete! Reference:', response.reference);
+
+//                 const orderDetails = {
+//                     ticket_id: document.getElementById("ticket_id")?.value,
+//                     full_name: document.getElementById("fullName")?.value,
+//                     email: document.getElementById("email")?.value,
+//                     phone: document.getElementById("phone")?.value,
+//                     reference: response.reference
+//                 };
+
+//                 console.log('Order Details:', orderDetails);
+
+//                 fetch(`/event_detail/${eventId}/save_order/`, {
+//                     method: 'POST',
+//                     headers: {
+//                         'Content-Type': 'application/json',
+//                         'X-CSRFToken': csrftoken
+//                     },
+//                     body: JSON.stringify(orderDetails)
+//                 })
+//                 .then(response => {
+//                     console.log('Fetch response received, status:', response.status);
+//                     if (!response.ok) {
+//                         throw new Error(`HTTP error! status: ${response.status}`);
+//                     }
+//                     return response.json();
+//                 })
+//                 .then(data => {
+//                     console.log('Order saved:', data);
+                
+//                     let ticketDetails = '';
+//                     data.tickets.forEach(ticket => {
+//                         ticketDetails += `
+//                             <p>${ticket.type} Ticket</p>
+//                             <p>${ticket.description}</p>
+//                             <p>Order ID: ${ticket.unique_order_id}</p>
+//                             <p>Price: NGN ${ticket.price.toFixed(2)}</p>
+//                             <img src="${ticket.barcode_url}" alt="Barcode for ${ticket.type} Ticket" />
+//                         `;
+//                     });
+                
+//                     document.getElementById("paymentForm").innerHTML = `
+//                         <p>Full Name: ${data.full_name}</p>
+//                         <p>Email: ${data.email}</p>
+//                         <p>Phone: ${data.phone}</p>
+//                         ${ticketDetails}
+//                         <p>Total Amount Paid: NGN ${data.total_amount.toFixed(2)}</p>
+//                     `;
+//                 })               
+//                 .catch(error => console.error('Error:', error));
+//             }
+//         });
+//         handler.openIframe();
+//     }
+// });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentForm = document.getElementById('paymentForm');
+    paymentForm.addEventListener("submit", payWithPaystack, false);
+
+    function payWithPaystack(e) {
+        e.preventDefault();
+        const eventId = document.getElementById('eventDetail')?.getAttribute('data-event-id');
+        if (!eventId) {
+            console.error('Event ID is missing.');
+            return;
+        }
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        if (!csrftoken) {
+            console.error('CSRF token is missing.');
+            return;
+        }
+    
+        const selectedTickets = [];
+        document.querySelectorAll('.quantity-select').forEach(select => {
+            const quantity = parseInt(select.value, 10);
+            if (quantity > 0) {
+                selectedTickets.push({
+                    ticket_id: select.getAttribute('data-id'),
+                    price: parseFloat(select.getAttribute('data-price')),
+                    quantity: quantity
+                });
+            }
+        });
+    
+        if (selectedTickets.length === 0) {
+            alert('Please select at least one ticket.');
+            return;
+        }
+    
+        const totalAmount = document.getElementById("total").innerText * 100; // Amount in kobo for Paystack
+        const email = document.getElementById("email").value;
+    
+        const handler = PaystackPop.setup({
+            key: 'pk_test_553d9f0f523ae22fcbb9131cc4b4f2fcce2d3c69',
+            email: email,
+            amount: totalAmount,
+            currency: 'NGN',
+            ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+            onClose: function() {
+                alert('Window closed.');
+            },
+            callback: function(response) {
+                console.log('Payment complete! Reference:', response.reference);
+    
+                const orderDetails = {
+                    full_name: document.getElementById("fullName").value,
+                    email: email,
+                    phone: document.getElementById("phone").value,
+                    tickets: selectedTickets,
+                    reference: response.reference
+                };
+
+                console.log('Order Details:', orderDetails);
+                fetch(`/event_detail/${eventId}/save_order/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(orderDetails)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Order saved:', data);
+    
+                    let ticketDetails = '';
+                    data.tickets.forEach(ticket => {
+                        ticketDetails += `
+                            <p>${ticket.type} Ticket</p>
+                            <p>${ticket.description}</p>
+                            <p>Order ID: ${ticket.unique_order_id}</p>
+                            <p>Price: ₦${ticket.price}</p>
+                            <img src="${ticket.barcode_url}" alt="Barcode for ${ticket.type} Ticket" />
+                        `;
+                    });
+    
+                    document.getElementById("paymentForm").innerHTML = `
+                        <p>Full Name: ${data.full_name}</p>
+                        <p>Email: ${data.email}</p>
+                        <p>Phone: ${data.phone}</p>
+                        ${ticketDetails}
+                        <p>Total Amount Paid: ₦${data.total_amount} minus %tax</p>
+                    `;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }); 
+        handler.openIframe();
+    }    
+});
+
+
+function setDateFilter(filter, button) {
+    const buttons = document.querySelectorAll('.btn-outline-primary');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    const today = new Date().toISOString().split('T')[0];
+    let startDate, endDate;
+
+    if (filter === 'today') {
+        startDate = endDate = today;
+    } else if (filter === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        startDate = endDate = tomorrow.toISOString().split('T')[0];
+    } else if (filter === 'weekend') {
+        const date = new Date();
+        const day = date.getDay();
+        const diffToSaturday = 6 - day;
+        const diffToSunday = 7 - day;
+        const saturday = new Date(date.setDate(date.getDate() + diffToSaturday)).toISOString().split('T')[0];
+        const sunday = new Date(date.setDate(date.getDate() + diffToSunday)).toISOString().split('T')[0];
+        startDate = saturday;
+        endDate = sunday;
+    }
+
+    document.getElementById('startDate').value = startDate;
+    document.getElementById('endDate').value = endDate;
+}
+
+
+function updatePrice(value) {
+    document.getElementById('priceValue').innerText = value;
 }

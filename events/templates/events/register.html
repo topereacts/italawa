@@ -8,7 +8,7 @@
         <div>{{ message }}</div>
     {% endif %}
 
-    <form action="{% url 'register' %}" method="post">
+    <form action="{% url 'event:register' %}" method="post">
         {% csrf_token %}
         <div class="form-group">
             <input class="form-control" type="text" name="name" placeholder="Full name">
@@ -31,6 +31,6 @@
         <input class="btn btn-primary" type="submit" value="Register">
     </form>
 
-    Already have an account? <a href="{% url 'login' %}">Log In here.</a>
+    Already have an account? <a href="{% url 'event:login' %}">Log In here.</a>
 
 {% endblock %}

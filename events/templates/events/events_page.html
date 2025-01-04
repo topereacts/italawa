@@ -1,0 +1,135 @@
+{% extends "events/layout.html" %}
+{% load static %}
+
+{% block body %}
+<div class="p-3">
+    <h2>All Events</h2>
+    <div class="container mt-4">
+        <!-- Filter Icon -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+            Filter Events
+        </button>
+
+        <!-- Modal -->
+        <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="filterModalLabel">Filter Events</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="filterForm" method="GET" action="{% url 'event:events_page' %}">
+                            <!-- Category Dropdown -->
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <select class="form-select" id="category">
+                                    <option value="">Select Category</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category }}">{{ category }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <!-- Price Range -->
+                            <div class="mb-3">
+                                <label for="priceRange" class="form-label">Price Range</label>
+                                <input type="range" class="form-range" id="priceRange" min="0" max="100" oninput="updatePrice(this.value)">
+                                <span id="priceValue">50</span>
+                            </div>
+                            <!-- Date Picker -->
+                            <div class="mb-3">
+                                <label class="form-label">Event Date</label>
+                                <div>
+                                    <button type="button" class="btn btn-outline-primary" onclick="setDateFilter('today', this)">Today</button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="setDateFilter('tomorrow', this)">Tomorrow</button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="setDateFilter('weekend', this)">This Weekend</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate">
+                            </div>
+                            <div class="mb-3">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate">
+                            </div>
+                            <!-- Location Dropdown -->
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <select class="form-select" id="location" name="location">
+                                    <option value="">Select Location</option>
+                                    <option value="ibadan">Ibadan</option>
+                                    <option value="lagos">Lagos</option>
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            </div>
+                        </form>
+                    </div>                    
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for event in page_obj %}
+                <div class="col-md-4 mb-4">
+                    <a href="{% url 'event:event_detail' event.id %}" class="card custom-card-size3">
+                    <div class="card">
+                        <img src="{{ event.poster.url }}" class="card-img-top1" alt="{{ event.name }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ event.name }}</h5>
+                            <p class="card-text">{{ event.description }}</p>
+                            <p class="card-text">{{ event.start_time }}</p>
+                            <p class="card-text">{{ event.category }}</p>
+                        </div>
+                    </div>
+                    {% if event.min_price == 0 %}
+                    <p class="card-text">Free</p>
+                    {% else %}
+                    <p class="card-text">Starting from ₦{{ event.min_price }}</p>
+                    {% endif %} 
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">&laquo; first</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+
+
+
+{% block script %}
+    <script src="{% static 'events/script.js' %}"></script>
+{% endblock %}
+
+{% endblock %}

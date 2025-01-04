@@ -1,0 +1,29 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+
+
+<div class="container">
+    <h2>Welcome, {{ user.creator }}</h2>
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="text-center p-4" style="border-radius: 15px; border: 1px solid #ccc; transform: scale(1);">
+        <p>"Bring people outside"</p>
+        <button class="btn btn-primary" id="openModalButton" onclick="event_details()">+ Create Event</button>
+        </div>
+    </div>
+
+    <h2>Active Events</h2>
+    <div id="events-container" class="row"></div>
+</div>
+
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}

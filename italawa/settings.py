@@ -146,5 +146,6 @@ EMAIL_HOST_PASSWORD = 'ecdmzpulixdnohvp'
 AUTH_USER_MODEL = 'events.User'
 
 
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

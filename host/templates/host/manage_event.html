@@ -1,0 +1,55 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+<div>
+    {% include "host/sidenav.html" %}
+    <div class="main-content">
+        <button onclick= "event_details('{{ event.id }}')">Edit Event</button>
+        <h2>{{ event.name }}</h2>
+        <img src="{{ event.poster.url }}" alt="">
+        <h2>Orders</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Ticket Type</th>
+                    <th>Ticket Description</th>
+                    <th>Quantity</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.full_name }}</td>
+                    <td>{{ order.email }}</td>
+                    <td>{{ order.ticket.type }}</td>
+                    <td>{{ order.ticket.description }}</td>
+                    <td>{{ order.quantity }}</td> <!-- Display the purchased quantity -->
+                    <td>{{ order.created_at }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No orders found for this event.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+
+</div>
+
+    
+
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}
