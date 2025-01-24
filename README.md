@@ -299,6 +299,6 @@ Database: PostgreSQL / SQLite
 Real-Time Features: Barcode scanner integration for ticket validation
 
 ## Additional Information
-Staff Role: Staff accounts are limited to dashboard, ticket management, and ticket scanning functionalities for added security.
-Ticket Scanning: The barcode scanner ensures secure and efficient ticket validation during the event.
-Revenue Tracking: Real-time revenue statistics help organizers monitor their financial performance.
+* Staff Role: Staff accounts are limited to dashboard, ticket management, and ticket scanning functionalities for added security.
+* Ticket Scanning: The barcode scanner ensures secure and efficient ticket validation during the event.
+* Revenue Tracking: Real-time revenue statistics help organizers monitor their financial performance.
