@@ -1,0 +1,59 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+<div>
+    {% include "host/sidenav.html" %}
+    <div class="main-content">
+        <h1>Manage Staff for {{ event.name }}</h1>
+
+        <!-- Staff Creation Form -->
+        <h2>Create Staff</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary" btn-primary type="submit">Create Staff</button>
+        </form>
+        
+        <!-- Staff List -->  
+        <h2>Existing Staff</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_list %}
+                <tr>
+                    <td>{{ staff.user.name }}</td>
+                    <td>{{ staff.user.email }}</td>
+                    <td>{{ staff.user.phone }}</td>
+                    <td>
+                        <form action="{% url 'host:remove_staff' staff.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        </form>
+                    </td>               
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No staff members yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}

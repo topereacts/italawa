@@ -1,0 +1,24 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+<div class="main-content">  
+    <h2>Name: {{ user.name }}</h2>
+    <h3>Creator: {{ user.creator }}</h3>
+    <h4>Email: {{ user.email }}</h4>
+    <h5>Phone: {{ user.phone }}</h5>
+</div>
+
+
+    
+
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}

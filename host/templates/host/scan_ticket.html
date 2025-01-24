@@ -1,0 +1,48 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+{% include "host/sidenav.html" %}
+<div class="main-content">
+    <h1>Scan Ticket</h1>
+    <div id="scanner-container"></div>
+    <table id="ticket-table" class="table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Unique Ticket ID</th>
+                <th>Checked In At</th>
+                <th>Ticket Type</th>
+                <th>Price</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in scanned_tickets %}
+            <tr>
+                <td>{{ ticket.order_id }}</td>
+                <td>{{ ticket.ticket_unique_order_id }}</td>
+                <td>{{ ticket.checked_in_at }}</td>
+                <td>{{ ticket.ticket_type }}</td>
+                <td>{{ ticket.ticket_price }}</td>
+                <td>{{ ticket.ticket_description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>    
+</div>
+
+
+    
+
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+{% endblock %}

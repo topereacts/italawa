@@ -11,6 +11,9 @@
         <button onclick= "event_details('{{ event.id }}')">Edit Event</button>
         <h2>{{ event.name }}</h2>
         <img src="{{ event.poster.url }}" alt="">
+        <h6>STARTS: {{ event.start_time }}</h6>
+        <h6>ENDS: {{ event.end_time }}</h6>
+        <h6>Total no of tickets sold: {{ total_quantity }}</h6>
         <h2>Orders</h2>
         <table class="table table-striped">
             <thead>
@@ -43,10 +46,6 @@
     </div>
 
 </div>
-
-    
-
-
 
 {% endblock %}
 

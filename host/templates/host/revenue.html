@@ -1,0 +1,22 @@
+{% extends "host/layout.html" %}
+
+{% load static %}
+
+
+
+{% block body %}
+{% include "host/sidenav.html" %}
+<div class="main-content">
+    <p>You have made ₦{{ event.revenue }} for {{ event.name }}</p>
+
+</div>
+
+    
+
+
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'host/script.js' %}"></script>
+{% endblock %}

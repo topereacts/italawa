@@ -23,14 +23,14 @@ from django.utils import timezone
 
 # Create your views here.
 from .forms import paymentForm
-from .models import User, Order
-from host.models import Event, Ticket  # Adjust the import based on your app name
+from .models import User, Order, TicketInstance
+from host.models import Event, Ticket, Staff # Adjust the import based on your app name
 
 
 
 def index(request):
-    today = timezone.now().date()  # Get the current date
-    events = Event.objects.annotate(min_price=Min('ticket__price')).exclude(end_time__date=today)
+    current_time = timezone.now()  # Get the current datetime
+    events = Event.objects.annotate(min_price=Min('ticket__price')).exclude(end_time__lt=current_time)
     return render(request, "events/index.html", {
         'events': events,
     })
@@ -43,7 +43,12 @@ def login_view(request):
         user = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
-            return redirect("host:index")  # Specify the app name
+            staff_member = Staff.objects.filter(user=user).first()
+            if staff_member and staff_member.role == 'staff':
+                event_id = staff_member.event.id
+                return redirect("host:manage_event", event_id=event_id)
+            else:
+                return redirect("host:index")
         else:
             return render(request, "events/login.html", {
                 "message": "Invalid credentials."
@@ -114,100 +119,57 @@ def get_tickets(request, event_id):
     return JsonResponse({'tickets': tickets_data})
 
 
-
+@csrf_exempt
 def events_page(request):
-    categories = Event.objects.values_list('category', flat=True).distinct()
-    events = Event.objects.annotate(min_price=Min('ticket__price'))
+    query = request.GET.get('q')  
+    current_time = timezone.now()  
+    events = Event.objects.annotate(min_price=Min('ticket__price')).exclude(end_time__lt=current_time)
 
-    location = request.GET.get('location')
+    # Retrieve filter parameters
+    category = request.GET.get('category', '')
+    # Retrieve filter parameters
+    price = request.GET.get('price', '')
+
+    # Filter by ticket price
+    if price:
+        events = events.filter(id__in=Ticket.objects.filter(price__lte=float(price)).values_list('event_id', flat=True))
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    location = request.GET.get('location', '')
+
+    # Apply filters
+    if category:
+        events = events.filter(category=category)
+    if start_date:
+        events = events.filter(start_time__gte=start_date)
+    if end_date:
+        events = events.filter(end_time__lte=end_date)
     if location:
         events = events.filter(location__icontains=location)
 
-    # Filter by category if provided
-    category = request.GET.get('category')
-    if category:
-        events = events.filter(category=category)
+    if query:
+        # Filter events by name or description containing the query
+        events = events.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )
+    
+    # Ensure consistent ordering
+    events = events.order_by('start_time')  # Replace 'start_time' with the field you prefer for ordering
 
-    # Filter by date if provided
-    date_filter = request.GET.get('date')
-    if date_filter == 'today':
-        today = datetime.now().date()
-        events = events.filter(start_time__date=today)
-    elif date_filter == 'tomorrow':
-        tomorrow = datetime.now().date() + timedelta(days=1)
-        events = events.filter(start_time__date=tomorrow)
-    elif date_filter == 'weekend':
-        today = datetime.now().date()
-        weekend_start = today + timedelta(days=(5-today.weekday()) % 7)
-        weekend_end = weekend_start + timedelta(days=2)
-        events = events.filter(start_time__date__range=[weekend_start, weekend_end])
-
-    # Pagination logic
-    paginator = Paginator(events, 6)  # Show 6 events per page
+    paginator = Paginator(events, 8)  # 8 events per page
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    events = paginator.get_page(page_number)
 
-    return render(request, 'events/events_page.html', {
-        'page_obj': page_obj,
-        'categories': categories,
-    })
-
-# @csrf_exempt
-# def save_order(request, event_id):
-#     if request.method == 'POST':
-#         data = json.loads(request.body)
-
-#         tickets_purchased = []
-#         total_amount = 0
-#         orders = []
+    context = {
+        'events': events,
+        'query': query,
+        'categories': Event.objects.values_list('category', flat=True).distinct(),
+    }
 
 
-#         for ticket_item in data['tickets']:
-#             ticket = Ticket.objects.get(id=ticket_item['ticket_id'])
-#             quantity = ticket_item['quantity']
-#             price = ticket_item['price']
+    return render(request, 'events/events_page.html', context)
 
-#             for _ in range(quantity):
-#                 # Generate a unique order ID
-#                 unique_order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
-#                 # Create an individual order
-#                 order = Order.objects.create(
-#                     ticket=ticket,
-#                     full_name=data['full_name'],
-#                     email=data['email'],
-#                     phone=data['phone'],
-#                     quantity=quantity  # Save the purchased quantity
-#                 )
-
-#                 orders.append(order)
-
-#                 # Generate barcode
-#                 barcode_path = os.path.join(settings.MEDIA_ROOT, f"barcodes/order_{unique_order_id}.png")
-#                 os.makedirs(os.path.dirname(barcode_path), exist_ok=True)
-
-#                 barcode_generator = barcode.get('code128', unique_order_id, writer=ImageWriter())
-#                 barcode_generator.save(barcode_path.replace('.png', ''))
-
-#                 # Append details to the response list
-#                 tickets_purchased.append({
-#                     'type': ticket.type,
-#                     'description': ticket.description,
-#                     'unique_order_id': unique_order_id,
-#                     'price': price,
-#                     'barcode_url': f"{settings.MEDIA_URL}barcodes/order_{unique_order_id}.png"
-#                 })
-
-#                 total_amount += price
-
-#         return JsonResponse({
-#             'full_name': data['full_name'],
-#             'email': data['email'],
-#             'phone': data['phone'],
-#             'tickets': tickets_purchased,
-#             'total_amount': total_amount,
-#             'orders': len(orders)
-#         })
 
 @csrf_exempt
 def save_order(request, event_id):
@@ -236,22 +198,33 @@ def save_order(request, event_id):
             quantity = details['quantity']
             price = details['price'] * quantity
 
-            # Generate a unique order ID for the group
+            # Generate a unique order ID for group
             unique_order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
-            # Create the order for the ticket type
+            # Create the order and save the unique order ID
             order = Order.objects.create(
                 ticket=ticket,
                 full_name=data['full_name'],
                 email=data['email'],
                 phone=data['phone'],
-                quantity=quantity  # Save the consolidated quantity
+                quantity=quantity,
+                unique_order_id=unique_order_id
             )
             orders.append(order)
+
+            # Update ticket quantities and sales
+            ticket.tickets_sold += quantity
+            ticket.quantity -= quantity
+            ticket.save()
 
             # Generate barcodes for each individual ticket in the order
             for i in range(quantity):
                 ticket_unique_order_id = f"{unique_order_id}-{i+1}"  # Unique barcode per ticket
+
+                TicketInstance.objects.create(
+                    order=order,
+                    ticket_unique_order_id=ticket_unique_order_id
+                )
 
                 # Generate barcode image
                 barcode_path = os.path.join(settings.MEDIA_ROOT, f"barcodes/order_{ticket_unique_order_id}.png")
@@ -270,6 +243,11 @@ def save_order(request, event_id):
                 })
 
             total_amount += price
+
+        # Update event revenue
+        event = ticket.event
+        event.revenue += total_amount
+        event.save()
 
         return JsonResponse({
             'full_name': data['full_name'],

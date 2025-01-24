@@ -1,11 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.core.mail import send_mail
-from django.http import JsonResponse, QueryDict, HttpResponseRedirect
+from django.http import JsonResponse, QueryDict, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.utils.timezone import now
+from django.db.models import Sum
 from datetime import datetime
 import json
 
@@ -13,8 +15,9 @@ import json
 
 # Create your views here.
 from .forms import EventForm, TicketForm
-from .models import Event, Ticket
-from events.models import Order
+from .models import Event, Ticket, Staff, Event
+from events.models import Order, TicketInstance, User
+from events.forms import StaffForm
 
 @csrf_exempt
 @login_required  
@@ -70,75 +73,13 @@ def get_user_events(request):
         return JsonResponse({'error': 'User not authenticated'}, status=401)
 
 
-# @csrf_exempt
-# @login_required
-# def manage_event(request, event_id):
-#     print("View reached")  # Debugging line
-#     event = get_object_or_404(Event, id=event_id, created_by=request.user)
-    
-#     if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#         event_data = {
-#             'id': event.id,
-#             'name': event.name,
-#             'category': event.category,
-#             'start_time': event.start_time,
-#             'end_time': event.end_time,
-#             'description': event.description,
-#             'location': event.location,
-#             'undisclosed': event.undisclosed,
-#             'directions': event.directions,
-#             'socials': event.socials,
-#             'poster': event.poster.url if event.poster else None
-#         }
-#         return JsonResponse(event_data)
-    
-#     if request.method == 'POST' or request.method == 'PUT':
-#         print("Handling POST/PUT request")  # Debugging line
-#         print("Request POST data:", request.POST)  # Debugging line
-#         try:
-#             data = request.POST
-#             event.name = data.get('name')
-#             print(f"Event name: {event.name}")
-#             event.category = data.get('category')
-#             event.start_time = data.get('start_time')
-#             event.end_time = data.get('end_time')
-#             event.description = data.get('description')
-#             event.location = data.get('location')
-#             event.undisclosed = data.get('undisclosed')
-#             event.directions = data.get('directions')
-#             event.socials = data.get('socials')
-
-#             if 'poster' in request.FILES:
-#                 event.poster = request.FILES['poster']
-#                 print("Poster file received")  # Debugging line
-#             else:
-#                 print("No poster file received")
-#             event.save()
-#             print("Event saved successfully")  # Debugging line
-#             return JsonResponse({'success': True, 
-#                                 'id': event.id, 
-#                                 'name': event.name,
-#                                 'category': event.category,
-#                                 'start_time': event.start_time,
-#                                 'end_time': event.end_time,
-#                                 'description': event.description,
-#                                 'location': event.location,
-#                                 'undisclosed': event.undisclosed,
-#                                 'directions': event.directions,
-#                                 'socials': event.socials,
-#                                 'poster': event.poster.url if event.poster else None
-#                             })
-#         except json.JSONDecodeError:
-#             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    
-#     return render(request, 'host/manage_event.html', {'event': event})
-
-
 
 @csrf_exempt
 @login_required
 def manage_event(request, event_id):
-    event = get_object_or_404(Event, id=event_id, created_by=request.user)
+    event = get_object_or_404(Event, id=event_id)
+    if event.created_by != request.user and not Staff.objects.filter(user=request.user, event=event).exists():
+        return HttpResponseForbidden("You do not have permission to access this event.")
     
     if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         data = {
@@ -197,14 +138,23 @@ def manage_event(request, event_id):
                         }) 
     # Fetch related orders
     orders = Order.objects.filter(ticket__event=event).order_by('-created_at')
+    
+    # Calculate total order quantity
+    total_quantity = orders.aggregate(total=Sum('quantity'))['total'] or 0
 
-    return render(request, 'host/manage_event.html', {'event': event, 'orders': orders})
+    return render(request, 'host/manage_event.html', {
+        'event': event, 
+        'orders': orders,
+        'total_quantity': total_quantity
+    })
 
 
 @csrf_exempt
 @login_required
 def tickets(request, event_id):
-    event = get_object_or_404(Event, id=event_id, created_by=request.user)
+    event = get_object_or_404(Event, id=event_id)
+    if event.created_by != request.user and not Staff.objects.filter(user=request.user, event=event).exists():
+        return HttpResponseForbidden("You do not have permission to access this event.")    
     tickets = Ticket.objects.filter(event=event)
     if request.method == 'POST':
         form = TicketForm(request.POST)
@@ -228,3 +178,120 @@ def tickets(request, event_id):
     else:
         form = TicketForm()
     return render(request, "host/ticket.html", {'event': event, 'tickets': tickets, 'form': form})
+
+@csrf_exempt
+@login_required
+def revenue(request, event_id):
+    event = get_object_or_404(Event, id=event_id, created_by=request.user)
+    return render(request, "host/revenue.html", {
+        'event': event,
+    })
+
+@csrf_exempt
+@login_required
+def scan_ticket_page(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    if event.created_by != request.user and not Staff.objects.filter(user=request.user, event=event).exists():
+        return HttpResponseForbidden("You do not have permission to access this event.")  
+    scanned_tickets = TicketInstance.objects.filter(order__ticket__event=event, is_checked_in=True)
+
+    ticket_data = [
+        {
+            'order_id': ticket.order.id,
+            'ticket_unique_order_id': ticket.ticket_unique_order_id,
+            'checked_in_at': ticket.checked_in_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'ticket_type': ticket.order.ticket.type,
+            'ticket_price': ticket.order.ticket.price,
+            'ticket_description': ticket.order.ticket.description,
+        }
+        for ticket in scanned_tickets
+    ]
+ 
+    return render(request, 'host/scan_ticket.html', {
+        'event': event,
+        'scanned_tickets': ticket_data
+    })
+
+@csrf_exempt
+@login_required
+def check_in_ticket(request):
+    ticket_unique_order_id = request.GET.get('ticket_unique_order_id')
+    ticket_instance = get_object_or_404(TicketInstance, ticket_unique_order_id=ticket_unique_order_id)
+    
+    if ticket_instance.is_checked_in:
+        # If the ticket is already checked in, return an error response
+        return JsonResponse({'status': 'error', 'message': 'Ticket already checked in'})
+    
+    # Mark the ticket as checked in
+    ticket_instance.is_checked_in = True
+    ticket_instance.checked_in_at = timezone.now()
+    ticket_instance.save()
+
+    # Fetch the related ticket details
+    ticket = ticket_instance.order.ticket
+
+    return JsonResponse({'status': 'success', 'ticket_details': {
+        'order_id': ticket_instance.order.id,
+        'ticket_unique_order_id': ticket_instance.ticket_unique_order_id,
+        'checked_in_at': ticket_instance.checked_in_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'ticket_type': ticket.type,
+        'ticket_price': ticket.price,
+        'ticket_description': ticket.description,
+    }})
+
+
+
+
+
+
+@csrf_exempt
+@login_required
+def create_staff(request, event_id):
+    if request.method == 'POST':
+        form = StaffForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            print(f"Creating user with username: {user.username}")  # Debugging statement
+            user.set_password('italawa')  # Set a default password or generate one
+            try:
+                user.save()
+            except IntegrityError as e:
+                print(f"IntegrityError: {e}")  # Debugging statement
+                form.add_error(None, "Username already exists.")
+                event = Event.objects.get(id=event_id)
+                staff_list = Staff.objects.filter(event=event)
+                return render(request, 'host/staff_mgmt.html', {
+                    'form': form, 
+                    'staff_list': staff_list,
+                    'event': event
+                })
+            event = Event.objects.get(id=event_id)
+            Staff.objects.create(user=user, event=event, role='staff')
+            return redirect('host:manage_event', event_id=event_id)
+    else:
+        form = StaffForm()
+    
+    event = Event.objects.get(id=event_id)
+    staff_list = Staff.objects.filter(event=event)
+    return render(request, 'host/staff_mgmt.html', {
+        'form': form, 
+        'staff_list': staff_list,
+        'event': event
+    })
+
+@csrf_exempt
+@login_required
+def profile(request):
+    user =  get_object_or_404(User, id=request.user.id)
+    return render(request, 'host/profile.html', {
+        'user': user
+    })
+
+@csrf_exempt
+@login_required
+def remove_staff(request, staff_id):
+    staff = get_object_or_404(Staff, id=staff_id)
+    event_id = staff.event.id  # Assuming staff is related to an event
+    staff.delete()
+    return redirect('host:staff_mgmt', event_id=event_id)
+    

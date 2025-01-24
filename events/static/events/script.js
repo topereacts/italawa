@@ -73,99 +73,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-
-
-// document.addEventListener('DOMContentLoaded', function() {
-//     const paymentForm = document.getElementById('paymentForm');
-//     paymentForm.addEventListener("submit", payWithPaystack, false);
-
-//     function payWithPaystack(e) {
-//         e.preventDefault();
-
-//         const eventId = document.getElementById('eventDetail')?.getAttribute('data-event-id');
-//         if (!eventId) {
-//             console.error('Event ID is missing.');
-//             return;
-//         }
-
-//         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-//         if (!csrftoken) {
-//             console.error('CSRF token is missing.');
-//             return;
-//         }
-
-//         const handler = PaystackPop.setup({
-//             key: 'pk_test_553d9f0f523ae22fcbb9131cc4b4f2fcce2d3c69',
-//             email: document.getElementById("email").value,
-//             amount: document.getElementById("total").innerText * 100,
-//             currency: 'NGN',
-//             ref: '' + Math.floor((Math.random() * 1000000000) + 1),
-//             onClose: function() {
-//                 alert('Window closed.');
-//             },
-//             callback: function(response) {
-//                 console.log('Payment complete! Reference:', response.reference);
-
-//                 const orderDetails = {
-//                     ticket_id: document.getElementById("ticket_id")?.value,
-//                     full_name: document.getElementById("fullName")?.value,
-//                     email: document.getElementById("email")?.value,
-//                     phone: document.getElementById("phone")?.value,
-//                     reference: response.reference
-//                 };
-
-//                 console.log('Order Details:', orderDetails);
-
-//                 fetch(`/event_detail/${eventId}/save_order/`, {
-//                     method: 'POST',
-//                     headers: {
-//                         'Content-Type': 'application/json',
-//                         'X-CSRFToken': csrftoken
-//                     },
-//                     body: JSON.stringify(orderDetails)
-//                 })
-//                 .then(response => {
-//                     console.log('Fetch response received, status:', response.status);
-//                     if (!response.ok) {
-//                         throw new Error(`HTTP error! status: ${response.status}`);
-//                     }
-//                     return response.json();
-//                 })
-//                 .then(data => {
-//                     console.log('Order saved:', data);
-                
-//                     let ticketDetails = '';
-//                     data.tickets.forEach(ticket => {
-//                         ticketDetails += `
-//                             <p>${ticket.type} Ticket</p>
-//                             <p>${ticket.description}</p>
-//                             <p>Order ID: ${ticket.unique_order_id}</p>
-//                             <p>Price: NGN ${ticket.price.toFixed(2)}</p>
-//                             <img src="${ticket.barcode_url}" alt="Barcode for ${ticket.type} Ticket" />
-//                         `;
-//                     });
-                
-//                     document.getElementById("paymentForm").innerHTML = `
-//                         <p>Full Name: ${data.full_name}</p>
-//                         <p>Email: ${data.email}</p>
-//                         <p>Phone: ${data.phone}</p>
-//                         ${ticketDetails}
-//                         <p>Total Amount Paid: NGN ${data.total_amount.toFixed(2)}</p>
-//                     `;
-//                 })               
-//                 .catch(error => console.error('Error:', error));
-//             }
-//         });
-//         handler.openIframe();
-//     }
-// });
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const paymentForm = document.getElementById('paymentForm');
     paymentForm.addEventListener("submit", payWithPaystack, false);
 
     function payWithPaystack(e) {
+        document.getElementById("checkoutButton").innerHTML = '<i class="bi bi-arrow-clockwise"></i> Processing...';
         e.preventDefault();
+
         const eventId = document.getElementById('eventDetail')?.getAttribute('data-event-id');
         if (!eventId) {
             console.error('Event ID is missing.');
@@ -177,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('CSRF token is missing.');
             return;
         }
-    
+
         const selectedTickets = [];
         document.querySelectorAll('.quantity-select').forEach(select => {
             const quantity = parseInt(select.value, 10);
@@ -189,48 +104,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         });
-    
+
         if (selectedTickets.length === 0) {
             alert('Please select at least one ticket.');
             return;
         }
-    
-        const totalAmount = document.getElementById("total").innerText * 100; // Amount in kobo for Paystack
-        const email = document.getElementById("email").value;
-    
-        const handler = PaystackPop.setup({
-            key: 'pk_test_553d9f0f523ae22fcbb9131cc4b4f2fcce2d3c69',
-            email: email,
-            amount: totalAmount,
-            currency: 'NGN',
-            ref: '' + Math.floor((Math.random() * 1000000000) + 1),
-            onClose: function() {
-                alert('Window closed.');
-            },
-            callback: function(response) {
-                console.log('Payment complete! Reference:', response.reference);
-    
-                const orderDetails = {
-                    full_name: document.getElementById("fullName").value,
-                    email: email,
-                    phone: document.getElementById("phone").value,
-                    tickets: selectedTickets,
-                    reference: response.reference
-                };
 
-                console.log('Order Details:', orderDetails);
-                fetch(`/event_detail/${eventId}/save_order/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify(orderDetails)
-                })
+        const totalAmount = parseFloat(document.getElementById("total").innerText) * 100; // Amount in kobo
+        const email = document.getElementById("email").value;
+
+        if (totalAmount === 0) {
+            // If total amount is 0, post directly without Paystack
+            const orderDetails = {
+                full_name: document.getElementById("fullName").value,
+                email: email,
+                phone: document.getElementById("phone").value,
+                tickets: selectedTickets,
+                reference: 'FREE_ORDER_' + Math.floor((Math.random() * 1000000000) + 1),
+            };
+
+            fetch(`/event_detail/${eventId}/save_order/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify(orderDetails),
+            })
                 .then(response => response.json())
                 .then(data => {
                     console.log('Order saved:', data);
-    
+
                     let ticketDetails = '';
                     data.tickets.forEach(ticket => {
                         ticketDetails += `
@@ -241,21 +145,78 @@ document.addEventListener('DOMContentLoaded', function() {
                             <img src="${ticket.barcode_url}" alt="Barcode for ${ticket.type} Ticket" />
                         `;
                     });
-    
+
                     document.getElementById("paymentForm").innerHTML = `
                         <p>Full Name: ${data.full_name}</p>
                         <p>Email: ${data.email}</p>
                         <p>Phone: ${data.phone}</p>
                         ${ticketDetails}
-                        <p>Total Amount Paid: ₦${data.total_amount} minus %tax</p>
+                        <p>Total Amount Paid: ₦${data.total_amount}</p>
                     `;
                 })
                 .catch(error => console.error('Error:', error));
-            }
-        }); 
+
+            return; // Exit the function, bypassing Paystack
+        }
+
+        const handler = PaystackPop.setup({
+            key: 'pk_test_553d9f0f523ae22fcbb9131cc4b4f2fcce2d3c69',
+            email: email,
+            amount: totalAmount,
+            currency: 'NGN',
+            ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+            onClose: function () {
+                alert('Window closed.');
+            },
+            callback: function (response) {
+                console.log('Payment complete! Reference:', response.reference);
+
+                const orderDetails = {
+                    full_name: document.getElementById("fullName").value,
+                    email: email,
+                    phone: document.getElementById("phone").value,
+                    tickets: selectedTickets,
+                    reference: response.reference,
+                };
+
+                fetch(`/event_detail/${eventId}/save_order/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: JSON.stringify(orderDetails),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Order saved:', data);
+
+                        let ticketDetails = '';
+                        data.tickets.forEach(ticket => {
+                            ticketDetails += `
+                                <p>${ticket.type} Ticket</p>
+                                <p>${ticket.description}</p>
+                                <p>Order ID: ${ticket.unique_order_id}</p>
+                                <p>Price: ₦${ticket.price}</p>
+                                <img src="${ticket.barcode_url}" alt="Barcode for ${ticket.type} Ticket" />
+                            `;
+                        });
+
+                        document.getElementById("paymentForm").innerHTML = `
+                            <p>Full Name: ${data.full_name}</p>
+                            <p>Email: ${data.email}</p>
+                            <p>Phone: ${data.phone}</p>
+                            ${ticketDetails}
+                            <p>Total Amount Paid: ₦${data.total_amount}</p>
+                        `;
+                    })
+                    .catch(error => console.error('Error:', error));
+            },
+        });
         handler.openIframe();
-    }    
+    }
 });
+
 
 
 function setDateFilter(filter, button) {
@@ -287,6 +248,10 @@ function setDateFilter(filter, button) {
 }
 
 
+
 function updatePrice(value) {
-    document.getElementById('priceValue').innerText = value;
+    const formattedValue = new Intl.NumberFormat('en-US', { style: 'decimal' }).format(value);
+    document.getElementById('priceValue').textContent = `${formattedValue}`;
 }
+
+

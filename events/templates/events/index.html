@@ -11,6 +11,8 @@
           <img src="{{ event.poster.url }}" class="card-img-top custom-img-size" alt="{{ event.name }}">
         </a>
       </div>
+      {% empty %}
+          <p>No events found.</p>
       {% endfor %}
     </div>
     <a class="carousel-control-prev" href="#eventCarousel" role="button" data-bs-slide="prev">
@@ -23,6 +25,7 @@
     </a>
   </div>
 
+
   <h2>PROMO EVENTS</h2>
   <div id="eventCarousel2" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner">
@@ -31,9 +34,9 @@
       <div class="carousel-item {% if forloop.first %}active{% endif %}">
         <div class="row">
       {% endif %}
-          <div class="col-md-3">
-            <a href="{% url 'event:event_detail' event.id %}" class="card custom-card-size2">
-              <img src="{{ event.poster.url }}" class="card-img-top custom-img-size2" alt="{{ event.name }}">
+          <div class="col-6 col-lg-3 d-flex justify-content-center">
+            <a href="{% url 'event:event_detail' event.id %}" class="card custom-card">
+              <img src="{{ event.poster.url }}" class="card-img-top custom-img" alt="{{ event.name }}">
               <div class="card-body">
                 <h5 class="card-title">{{ event.name }}</h5>
                 <p class="card-text">{{ event.description }}</p>
@@ -43,7 +46,7 @@
                 <p class="card-text">Free</p>
                 {% else %}
                 <p class="card-text">Starting from ₦{{ event.min_price }}</p>
-                {% endif %}              
+                {% endif %}
               </div>
             </a>
           </div>
@@ -51,6 +54,8 @@
         </div>
       </div>
       {% endif %}
+      {% empty %}
+        <p>No events found.</p>
       {% endfor %}
     </div>
     <a class="carousel-control-prev" href="#eventCarousel2" role="button" data-bs-slide="prev">
@@ -62,6 +67,12 @@
       <span class="visually-hidden">Next</span>
     </a>
   </div>
+  
+  
+  
+
+  
+
 
   
 </div>

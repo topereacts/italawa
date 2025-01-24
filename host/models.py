@@ -7,7 +7,6 @@ from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
-
 class Event(models.Model):
     poster = models.ImageField(upload_to='posters/', blank=True, null=True)
     name = models.CharField(max_length=255)
@@ -20,6 +19,10 @@ class Event(models.Model):
     directions = models.TextField(blank=True)
     socials = models.URLField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Total revenue
+
+    def __str__(self):
+        return self.name
 
 
 class Ticket(models.Model):
@@ -30,13 +33,12 @@ class Ticket(models.Model):
     description = models.TextField()
     deadline = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
-    tickets_sold = models.PositiveIntegerField(default=0)
+    tickets_sold = models.PositiveIntegerField(default=0)  # Number of tickets sold
     revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
-    def update_sales(self, quantity_sold):
-        self.tickets_sold += quantity_sold
-        self.revenue += quantity_sold * self.price
-        self.save()
+    def __str__(self):
+        return self.type
+
 
 class Staff(models.Model):
     ROLE_CHOICES = [

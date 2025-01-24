@@ -117,10 +117,43 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// function displayEvents(events) {
+//     const container = document.querySelector('#events-container');
+//     container.innerHTML = ''; // Clear the container first
+//     events.forEach(event => {
+//         const eventCard = `
+//             <div class="col-md-4">
+//                 <div class="card">
+//                     <div class="card-body">
+//                         <img src="${event.poster}" alt="Event Poster" class="img-fluid">
+//                         <h5 class="card-title">${event.name}</h5>
+//                         <p class="card-text">${event.description}</p>
+//                         <p class="card-text"><small class="text-muted">${new Date(event.start_time).toLocaleString()}</small></p>
+//                         <button class="btn btn-primary manage-event" data-event-id="${event.id}">Manage Event</button>
+//                     </div>
+//                 </div>
+//             </div>
+//         `;
+//         container.innerHTML += eventCard;
+//     });
+//     // Reattach event listeners to the new buttons
+//     document.querySelectorAll('.manage-event').forEach(button => {
+//         button.addEventListener('click', (event) => {
+//             const eventId = event.target.getAttribute('data-event-id');
+//             window.location.href = `/host/manage_event/${eventId}`;
+//         });
+//     });
+// }
+
 function displayEvents(events) {
     const container = document.querySelector('#events-container');
     container.innerHTML = ''; // Clear the container first
+    const currentTime = new Date(); // Get the current date and time
+
     events.forEach(event => {
+        // Check if the event has ended
+        const isEventEnded = new Date(event.end_time) < currentTime;
+
         const eventCard = `
             <div class="col-md-4">
                 <div class="card">
@@ -129,14 +162,18 @@ function displayEvents(events) {
                         <h5 class="card-title">${event.name}</h5>
                         <p class="card-text">${event.description}</p>
                         <p class="card-text"><small class="text-muted">${new Date(event.start_time).toLocaleString()}</small></p>
-                        <button class="btn btn-primary manage-event" data-event-id="${event.id}">Manage Event</button>
+                        <button class="btn btn-primary manage-event ${isEventEnded ? 'ended-event' : ''}" 
+                                data-event-id="${event.id}">
+                            Manage Event
+                        </button>
                     </div>
                 </div>
             </div>
         `;
         container.innerHTML += eventCard;
     });
-    // Reattach event listeners to the new buttons
+
+    // Attach event listeners to all buttons
     document.querySelectorAll('.manage-event').forEach(button => {
         button.addEventListener('click', (event) => {
             const eventId = event.target.getAttribute('data-event-id');
@@ -144,6 +181,7 @@ function displayEvents(events) {
         });
     });
 }
+
 
 
 
@@ -273,4 +311,61 @@ document.addEventListener('DOMContentLoaded', (event) => {
     priceInput.addEventListener('input', function() {
         hiddenPrice.value = priceInput.value;
     });
+});
+
+
+
+//  barcode scanner
+document.addEventListener("DOMContentLoaded", function () {
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scanner-container')
+        },
+        decoder: {
+            readers: ["code_128_reader"] // Adjust based on your barcode type
+        }
+    }, function (err) {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        Quagga.start();
+    });
+
+    const scannedTickets = new Set(); // Keep track of already scanned tickets
+
+    Quagga.onDetected(function (result) {
+        const ticketUniqueOrderId = result.codeResult.code;
+
+        if (scannedTickets.has(ticketUniqueOrderId)) {
+            alert("Ticket already scanned!");
+            return;
+        }
+
+        fetch(`/host/check_in_ticket/?ticket_unique_order_id=${ticketUniqueOrderId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateTable(data.ticket_details);
+                    scannedTickets.add(ticketUniqueOrderId); // Mark ticket as scanned
+                } else {
+                    alert(data.message || 'Check-in failed');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    function updateTable(details) {
+        const table = document.getElementById('ticket-table').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+
+        newRow.insertCell(0).innerHTML = details.order_id;
+        newRow.insertCell(1).innerHTML = details.ticket_unique_order_id;
+        newRow.insertCell(2).innerHTML = details.checked_in_at;
+        newRow.insertCell(3).innerHTML = details.ticket_type;
+        newRow.insertCell(4).innerHTML = details.ticket_price;
+        newRow.insertCell(5).innerHTML = details.ticket_description;
+    }
 });

@@ -1,0 +1,2 @@
+django
+python-barcode==0.13.1

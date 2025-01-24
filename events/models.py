@@ -29,7 +29,17 @@ class Order(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=15)
     quantity = models.PositiveIntegerField(default=1)
+    unique_order_id = models.CharField(max_length=50, unique=True)  # Store unique ID for order
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Order {self.unique_order_id} for {self.full_name}"
 
     class Meta:
         ordering = ['-created_at']
+
+class TicketInstance(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='ticket_instances')
+    ticket_unique_order_id = models.CharField(max_length=50, unique=True)
+    is_checked_in = models.BooleanField(default=False)  # Tracks check-in status
+    checked_in_at = models.DateTimeField(null=True, blank=True)  # Check-in timestamp

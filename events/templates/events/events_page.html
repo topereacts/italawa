@@ -5,10 +5,34 @@
 <div class="p-3">
     <h2>All Events</h2>
     <div class="container mt-4">
-        <!-- Filter Icon -->
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
-            Filter Events
-        </button>
+        
+        <!-- search bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- Filter Icon -->
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal"><i class="bi bi-funnel" ></i></button>
+            <form method="GET" action="{% url 'event:events_page' %}" class="search-bar">
+              <div class="input-group">
+                <input 
+                  type="text" 
+                  name="q" 
+                  class="form-control" 
+                  placeholder="Search events by name or keywords in description" 
+                  value="{{ request.GET.q|default:'' }}"
+                  required>
+                <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+              </div>
+            </form>
+        </div>
+        <div class="search-results">
+            {% if query %}
+              <p>Search results for: "{{ query }}"</p>
+              {% if not events %}
+                <p>No events match your search.</p>
+              {% endif %}
+            {% endif %}
+        </div>
+          
+          
 
         <!-- Modal -->
         <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
@@ -23,7 +47,7 @@
                             <!-- Category Dropdown -->
                             <div class="mb-3">
                                 <label for="category" class="form-label">Category</label>
-                                <select class="form-select" id="category">
+                                <select class="form-select" id="category" name="category">
                                     <option value="">Select Category</option>
                                     {% for category in categories %}
                                         <option value="{{ category }}">{{ category }}</option>
@@ -33,9 +57,16 @@
                             <!-- Price Range -->
                             <div class="mb-3">
                                 <label for="priceRange" class="form-label">Price Range</label>
-                                <input type="range" class="form-range" id="priceRange" min="0" max="100" oninput="updatePrice(this.value)">
-                                <span id="priceValue">50</span>
-                            </div>
+                                <input type="range" 
+                                       class="form-range" 
+                                       id="priceRange" 
+                                       name="price" 
+                                       min="0" 
+                                       max="1000000" 
+                                       step="1000" 
+                                       oninput="updatePrice(this.value)">
+                                <span id="priceValue">500,000</span>
+                            </div>                            
                             <!-- Date Picker -->
                             <div class="mb-3">
                                 <label class="form-label">Event Date</label>
@@ -47,11 +78,11 @@
                             </div>
                             <div class="mb-3">
                                 <label for="startDate" class="form-label">Start Date</label>
-                                <input type="date" class="form-control" id="startDate">
+                                <input type="date" class="form-control" id="startDate" name="start_date">
                             </div>
                             <div class="mb-3">
                                 <label for="endDate" class="form-label">End Date</label>
-                                <input type="date" class="form-control" id="endDate">
+                                <input type="date" class="form-control" id="endDate" name="end_date">
                             </div>
                             <!-- Location Dropdown -->
                             <div class="mb-3">
@@ -66,64 +97,54 @@
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                 <button type="submit" class="btn btn-primary">Apply Filters</button>
                             </div>
-                        </form>
+                        </form>                        
                     </div>                    
                 </div>
             </div>
         </div>
 
         <div class="row">
-            {% for event in page_obj %}
-                <div class="col-md-4 mb-4">
-                    <a href="{% url 'event:event_detail' event.id %}" class="card custom-card-size3">
-                    <div class="card">
-                        <img src="{{ event.poster.url }}" class="card-img-top1" alt="{{ event.name }}">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ event.name }}</h5>
-                            <p class="card-text">{{ event.description }}</p>
-                            <p class="card-text">{{ event.start_time }}</p>
-                            <p class="card-text">{{ event.category }}</p>
-                        </div>
-                    </div>
-                    {% if event.min_price == 0 %}
-                    <p class="card-text">Free</p>
-                    {% else %}
-                    <p class="card-text">Starting from ₦{{ event.min_price }}</p>
-                    {% endif %} 
-                    </a>
-                </div>
-            {% endfor %}
+          {% for event in events %}
+          <div class="col-6 col-md-3 col-lg-3 mb-4"> <!-- 4 cards per row on small and large screens -->
+              <a href="{% url 'event:event_detail' event.id %}" class="card custom-card2">
+                  <div class="card">
+                      <img src="{{ event.poster.url }}" class="card-img-top custom-img2" alt="{{ event.name }}">
+                      <div class="card-body">
+                          <h5 class="card-title">{{ event.name }}</h5>
+                          <p class="card-text">{{ event.description }}</p>
+                          <p class="card-text">{{ event.start_time }}</p>
+                          <p class="card-text">{{ event.category }}</p>
+                          {% if event.min_price == 0 %}
+                          <p class="card-text">Free</p>
+                          {% else %}
+                          <p class="card-text">Starting from ₦{{ event.min_price }}</p>
+                          {% endif %}
+                      </div>
+                  </div>
+              </a>
+          </div>
+          {% empty %}
+          <p>No events found.</p>
+          {% endfor %}
         </div>
-
-        <div class="pagination">
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">&laquo; first</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">previous</a>
-                        </li>
-                    {% endif %}
-
-                    <li class="page-item disabled">
-                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                    </li>
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">next</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-    </div>
-</div>
+          
+          <!-- Pagination Controls -->
+          <div class="pagination">
+            <span class="page-links">
+              {% if events.has_previous %}
+              <a href="?page=1">&laquo; First</a>
+              <a href="?page={{ events.previous_page_number }}">Previous</a>
+              {% endif %}
+          
+              Page {{ events.number }} of {{ events.paginator.num_pages }}
+          
+              {% if events.has_next %}
+              <a href="?page={{ events.next_page_number }}">Next</a>
+              <a href="?page={{ events.paginator.num_pages }}">Last &raquo;</a>
+              {% endif %}
+            </span>
+          </div>
+          
 
 
 
